@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Quick View Table</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Quick View Table">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables.min.css') }}"/>
+  <script type="text/javascript" src="{{ url_for('static', filename='datatables.min.js') }}"></script>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='dashboard.css') }}"/>
+  <script src="{{ url_for('static', filename='feather.min.js') }}"></script>
+</head>
+
+<body>
+  <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">qvtable</a>
+    <span id="dataName" class="ml-3 navbar-text text-light w-100 p-0"></span>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+        <div class="sidebar-sticky">
+
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+            <span>Data Files</span>
+            <a class="d-flex align-items-center text-muted" href="#">
+              <span data-feather="refresh-ccw"></span>
+            </a>
+          </h6>
+
+          <ul id="dataList" class="nav">
+            <li></li>
+          </ul>
+
+        </div>
+      </nav>
+
+      <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+        <div class="table-responsive">
+          <table id="dataTable" class="table table-striped table-bordered" cellspacing="0" width="100%">
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Dynamic content handling -->
+  <script>
+
+  window.onpopstate = function(e) {
+    if(e.state) {
+      updateDataTable(e.state.data);
+    }
+  }
+
+  function updateDataList() {
+    $.getJSON("/data/", function(data) {
+      var items = []
+      $.each(data, function(id, obj) {
+        items.push('<li class="nav-item">' +
+                   '<a class="nav-link" onclick="dataLinkClick(\'' + obj.name + '\')" href="/' + obj.name + '">' +
+                   '<span data-feather="file-text"></span>' +
+                   obj.name +
+                   '<span class="badge badge-default">' +
+                   obj.date +
+                   '</span>' +
+                   '</a>' +
+                   '</li>');
+      });
+      $("#dataList").html(items.join(''));
+      // Update icons
+      feather.replace();
+    })
+  }
+
+  /* Displays table with given data name */
+  var table;
+  function updateDataTable(dataname) {
+    $.getJSON("/data/" + dataname, function(tabledata) {
+      header = tabledata.shift();
+      columnsdata = [];
+      $.each(header, function(idx, val) {
+        columnsdata.push({title: val});
+      })
+
+      $('#dataName').html(dataname);
+
+      if(typeof table !== 'undefined') {
+        table.destroy();
+        $("#dataTable").empty();
+      };
+      table = $('#dataTable').DataTable( {
+        data: tabledata,
+        paging: false,
+        info: false,
+        searching: true,
+        columns: columnsdata,
+        colReorder: true,
+        dom: 'Bfrtip',
+        buttons: ['copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5'],
+      });
+    });
+  }
+
+  function dataLinkClick(dataname) {
+    event.preventDefault();
+    updateDataTable(dataname);
+    window.history.pushState({"data": dataname}, "", "/" + dataname);
+  }
+
+  /* Once the page is loaded update list of data files */
+  $().ready(function() {
+    feather.replace();
+    updateDataList();
+    {% if filename %}
+    updateDataTable("{{ filename }}");
+    {% endif %}
+  });
+  </script>
+</body>
+
+</html>
